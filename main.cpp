@@ -11,16 +11,33 @@
 #include "map.hpp"
 #include "player.hpp"
 #include "monster.hpp"
+#include "prompt.hpp"
 
 #include <cmath>
 using std::abs;
 
+enum prompt{
+	INTRO = 1,
+	NOHEALTH,
+	MONSTER,
+	KEY,
+	SPHINXINTRO,
+	SPHINXCHOICE,
+	WEAPON,
+	DOOR,
+	GOAL
+};
+
 int main(){
+	//Gameloop variable
 	bool keepPlaying = true;
+
+	//Randomize seed for die
 	unsigned seed;
 	seed = time(0);
 	srand(seed);
 
+	//Prompt player to begin game
 	if(programStart("Dungeon") == false)
 		return 0;
 
@@ -31,29 +48,17 @@ int main(){
 	dungeon.getSpace(15,2)->setBeing(user);
 	dungeon.getSpace(7,7)->setBeing(beast);
 
-	//Explain rules
-	cout	<< "Welcome to the Dungeon! You've been placed here as a test to see if you really are\n"
-		<< "the true hero this land has been waiting for! The first thing you notice is that the\n"
-		<< "atmosphere is heavy here. Very heavy. So heavy in fact that it's a detriment to your\n"
-		<< "health. So for every STEP you take you will LOSE ONE HEALTH. But fear not! There are\n"
-		<< "HEALING ITEMS scattered throughout this dungeon that will restore 10 of your health!\n"
-		<< "HEALING ITEMS look like a + on the map. They're all over this place. Also you have some.\n"
-		<< "The goal here is to reach the GOAL and get out of this dungeon! The GOAL is marked\n"
-		<< "on the map with $. So you want to make your way over to $. But what's that? there's\n"
-		<< "a ] in front of it? Yeah that's a DOOR and it's locked. You'll need the KEY to unlock\n"
-		<< "it. The KEY is %. But wait there's a @ patrolling that hallway. Yeah you better steer\n"
-		<< "clear of @. That's the MONSTER that guards the key. If you run into him it's game over\n"
-		<< "unless... you have the LEGENDARY WEAPON. The LEGENDARY WEAPON W is being guarded by the\n"
-		<< "beautiful SPHINX &. Careful though, the SPHINX isn't just there for show, she's guarding\n"
-		<< "the LEGENDARY WEAPON. You'll have to meet her and brave the challenge that she presents.\n"
-		<< "Well good luck! Your people await you, if you are the true hero.\n"
-		<< endl;
+	//Introduction and rules
+	printPrompt(INTRO);
 
 /**************************************************************************************************************
 **************************************************************************************************************/
 	//Start game
 	while(keepPlaying){
+		//Print map
 		dungeon.print();
+
+		//Print player stats
 		cout	<< "You're health: "
 			<< user->getHealth()
 			<< endl
@@ -63,60 +68,83 @@ int main(){
 
 		//User action options
 		switch(menu()){
+			//Move up
 			case 1:
+				//Check if player can occupy space
 				if(dungeon.getSpace(user->getXCoor(),user->getYCoor())->getUp() != nullptr){
+					//Move player up
 					dungeon.getSpace(user->getXCoor(), user->getYCoor())->move(1);
+					//Subtract health
 					user->subHealth();
+					//Move monster in dungeon
 					if(beast != nullptr)
 						dungeon.getSpace(beast->getXCoor(), beast->getYCoor())->moveMonster();
 				}
-
+				//Player can't move there
 				else
 					cout << "You can't move there, a wall is in the way.\n";
 			break;
 
+			//Move down
 			case 2:
+				//Check if player can occupy space
 				if(dungeon.getSpace(user->getXCoor(),user->getYCoor())->getDown() != nullptr){
+					//Move player down
 					dungeon.getSpace(user->getXCoor(), user->getYCoor())->move(2);
+					//Subtract health
 					user->subHealth();
+					//Move monster in dungeon
 					if(beast != nullptr)
 						dungeon.getSpace(beast->getXCoor(), beast->getYCoor())->moveMonster();
 				}
-
+				//Player can't move there
 				else
 					cout << "You can't move there, a wall is in the way.\n";
 			break;
 
+			//Move left
 			case 3:
+				//Check if player can occupy space
 				if(dungeon.getSpace(user->getXCoor(),user->getYCoor())->getLeft() != nullptr){
+					//Move player left
 					dungeon.getSpace(user->getXCoor(), user->getYCoor())->move(3);
+					//Subtract health
 					user->subHealth();
+					//Move monster in dungeon
 					if(beast != nullptr)
 						dungeon.getSpace(beast->getXCoor(), beast->getYCoor())->moveMonster();
 				}
-
+				//Player can't move there
 				else
 					cout << "You can't move there, a wall is in the way.\n";
 			break;
 
+			//Move right
 			case 4:
+				//Check if player can occupy space
 				if(dungeon.getSpace(user->getXCoor(),user->getYCoor())->getRight() != nullptr){
+					//Move player right
 					dungeon.getSpace(user->getXCoor(), user->getYCoor())->move(4);
+					//Subtract health
 					user->subHealth();
+					//Move monster in dungeon
 					if(beast != nullptr)
 						dungeon.getSpace(beast->getXCoor(), beast->getYCoor())->moveMonster();
 				}
-
+				//Player can't move there
 				else
 					cout << "You can't move there, a wall is in the way.\n";
 			break;
 
+			//Use healing item
 			case 5:
+				//Check if user has healing item
 				if(user->getItems() > 0){
+					//Use item
 					user->useItem();
 					cout << "Your health has been restored.\n";
 				}
-
+				//Player doesn't have healing item
 				else
 					cout << "You don't have any healing items.\n";
 			break;
@@ -125,16 +153,19 @@ int main(){
 /**************************************************************************************************************
 **************************************************************************************************************/
 
-		//Player runs out of health
+		//Player runs out of health and dies
 		if(user->getHealth() < 1){
-			cout	<< "Oh no the deadly atmosphere in the dungeon got to you!\n"
-				<< "You have died in the dungeon.\n";
+			//Explanation
+			printPrompt(NOHEALTH);
+			//Turn off game
 			keepPlaying = false;
 		}
 
 		//Player reaches item
 		if((keepPlaying == true) && (dungeon.getSpace(user->getXCoor(), user->getYCoor())->isItem())){
+			//Check if space has item
 			if(dungeon.getSpace(user->getXCoor(), user->getYCoor())->getHasItem()){
+				//Congratulate, add item, and change space to an empty space
 				cout	<< "You've obtained a healing item!\n";
 				user->addItem();
 				dungeon.getSpace(user->getXCoor(), user->getYCoor())->change();
@@ -146,30 +177,38 @@ int main(){
 
 		//Player and monster meet up
 		if((keepPlaying == true) && (beast != nullptr) &&(abs(user->getXCoor() - beast->getXCoor()) < 2) && (abs(user->getYCoor() - beast->getYCoor()) < 2)){
+			//If player has sword
 			if(user->getWeapon()){
+				//Print map
 				dungeon.print();
+				//Indicate to player that monster is slain and empty space monster was in
 				cout 	<< "You have slayed the beast with your newly acquired legendary weapon!\n";
 				dungeon.getSpace(beast->getXCoor(), beast->getYCoor())->setBeing(nullptr);
+				//Delete monster
 				delete beast;
 				beast = nullptr;				
 			}
 
+			//If player doesn't have sword
 			else{
+				//Print map
 				dungeon.print();
-				cout	<< "You have been attacked by the beast. Where is your weapon?!\n"
-					<< "You have died, you are now dead.\n";
+				//Indicate that player is dead
+				printPrompt(MONSTER);
 				keepPlaying = false;
 			}
 		}
 
 		//Player reaches key
 		if((keepPlaying == true) && (dungeon.getSpace(user->getXCoor(), user->getYCoor())->isKey())){
+			//Player already has key
 			if(user->getKey())
 				cout 	<< "You already have the key.\n";
 
+			//Player doesn't have key
 			else{
-				cout	<< "You have obtained the key!\n"
-					<< "Now you can unlock the door and get out of here!\n";
+				//Indicate player has picked up key, give key to player, change key space to empty space
+				printPrompt(KEY);
 				user->obtainKey();
 				dungeon.getSpace(user->getXCoor(), user->getYCoor())->change();
 			}				
@@ -177,25 +216,14 @@ int main(){
 
 		//Player runs into Sphinx
 		if((keepPlaying == true) && (user->getBeatSphinx() == false) && (dungeon.getSpace(user->getXCoor(), user->getYCoor())->isSphinx())){
-			cout	<< "You look to see that there is a Sphinx guarding the legendary\n"
-				<< "weapon needed to slay the monster of the dungeon. 'Yes it is just\n"
-				<< "as you think, I am a Sphinx' As fearsome as they can be, this Sphinx\n"
-				<< "possesses a rare beauty that radiates from her body. 'Now I know why\n"
-				<< "you are here. You need to escape this dungeon to prove to the people\n"
-				<< "that you are their long awaited savior. And to do that you need this key\n"
-				<< "that I happen to be guarding. Well as a Sphinx, like the rest of my kind\n"
-				<< "I have a riddle for you. If you can answer it correctly then I will let\n"
-				<< "you through to the key. However answer it wrong, and you'll see a nasty\n"
-				<< "side to me that you'll wish you hadn't.\n\n";
+			printPrompt(SPHINXINTRO);
 
-		bool sPlaying = true;
+			//Player enters Sphinx quiz loop
+			bool sPlaying = true;
 
+			//Sphinx quiz
 			while(sPlaying){
-				cout	<< "Come next year I will be on my way to graduating from this program to\n"
-					<< "Seize the moment that I get hired by a decent tech company with these qualities\n"
-					<< "1. The company must have a healthy work culture...\n"
-					<< "6. The company have co-workers that I like and would want to hang out with\n"
-					<< "2. I will get started on opening my own Indie Game Developement Studio\n";
+				printPrompt(SPHINXCHOICE);
 				switch(sMenu()){
 					case 1:
 						sResponse();
@@ -209,6 +237,7 @@ int main(){
 						sResponse();
 					break;
 
+					//Correct response
 					case 4:
 						cout << "Well then, I guess you can proceed now.\n";
 						sPlaying = false;
@@ -224,12 +253,13 @@ int main(){
 
 		//Player reaches weapon
 		if((keepPlaying == true) && (dungeon.getSpace(user->getXCoor(), user->getYCoor())->isWeapon())){
+			//Player already has weapon
 			if(user->getWeapon())
 				cout	<< "You already have the legendary weapon of lore.\n";
 	
+			//Player obtains weapon
 			else{
-				cout	<< "You have obtained the legendary weapon of lore!\n"
-					<< "Now you can slay the monster guarding the key!\n";
+				printPrompt(WEAPON);
 				user->obtainWeapon();
 				dungeon.getSpace(user->getXCoor(), user->getYCoor())->change();
 			}
@@ -237,21 +267,23 @@ int main(){
 
 		//Player reaches door
 		if((keepPlaying == true) && (dungeon.getSpace(user->getXCoor(), user->getYCoor())->isDoor())){
+			//Player has key to unlock door
 			if(user->getKey()){
-				cout 	<< "You insert the key... and click! The door's now\n"
-					<< "unlocked! Let's get out of this dungeon!\n";
+				printPrompt(DOOR);
 			}
 
+			//Player doesn't have the key
 			else{
 				cout	<< "You don't have the key to get through this door.\n";
+				//Move player back a space away from door
 				dungeon.getSpace(user->getXCoor(), user->getYCoor())->move(3);
 			}
 		}
 
 		//Player reaches goal
 		if((keepPlaying == true) && (dungeon.getSpace(user->getXCoor(), user->getYCoor())->isGoal())){
-			cout 	<< "Congratulations! You've survived and made it out of the dungeon!\n"
-				<< "You are winner!\n";
+			//Congratulate player and end game
+			printPrompt(GOAL);
 			keepPlaying = false;
 		}
 	}
